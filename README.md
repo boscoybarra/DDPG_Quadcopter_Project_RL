@@ -1,22 +1,29 @@
 # Deep RL Quadcopter Controller
 
-*Teach a Quadcopter How to Fly!*
+*Teaching a Quadcopter How to Fly!*
 
-In this project, you will design an agent to fly a quadcopter, and then train it using a reinforcement learning algorithm of your choice! 
+Designed an agent to fly a quadcopter, and then train it using a reinforcement learning algorithm.
 
 ## Project Instructions
 
-1. Clone the repository and navigate to the downloaded folder.
+1. Clone the original repository and navigate to the downloaded folder
 
 ```
 git clone https://github.com/udacity/RL-Quadcopter-2.git
 cd RL-Quadcopter-2
 ```
 
+1.1. Clone the original repository and navigate to the downloaded folder
+
+```
+git clone https://github.com/boscoybarra/DDPG_Quadcopter_Project_RL
+cd DDPG_Quadcopter_Project_RL
+```
+
 2. Create and activate a new environment.
 
 ```
-conda create -n quadcop python=3.6 matplotlib numpy pandas
+conda create -n quadcop python=3.6 matplotlib numpy pandas ipykernel keras
 source activate quadcop
 ```
 
