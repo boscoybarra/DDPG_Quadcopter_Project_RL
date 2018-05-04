@@ -41,28 +41,6 @@ class Actor:
         # Define input layer (states)
         states = layers.Input(shape=(self.state_size,), name='states')
 
-        # actor = Sequential()
-
-        # # we can think of this chunk as the input layer
-        # actor.add(Dense(64, input_dim=14, init='uniform'))
-        # actor.add(BatchNormalization())
-        # actor.add(Activation('tanh'))
-        # actor.add(Dropout(0.5))
-
-        # # we can think of this chunk as the hidden layer with a regularizers
-        # actor.add(Dense(64, init='uniform'))
-        # actor.add(Dense(64, input_dim=64,
-        #         kernel_regularizer=regularizers.l2(0.01),
-        #         activity_regularizer=regularizers.l1(0.01)))
-        # actor.add(BatchNormalization())
-        # actor.add(Activation('tanh'))
-        # actor.add(Dropout(0.5))
-
-        # # we can think of this chunk as the output layer
-        # actor.add(Dense(2, init='uniform'))
-        # actor.add(BatchNormalization())
-        # actor.add(Activation('softmax'))
-        # print(actor.summary())
 
         # Add hidden layers
         net = layers.Dense(units=32, activation='relu')(states)
@@ -70,8 +48,27 @@ class Actor:
         net = layers.Dense(units=32, activation='relu')(net)
 
         # Try different layer sizes, activations, add batch normalization, regularizers, etc.
-        # instantiate model
 
+        # we can think of this chunk as the input layer
+        net = layers.Dense(64, input_dim=14, init='uniform')(net)
+        net = layers.normalization.BatchNormalization()(net)
+        net = layers.Dense(64, input_dim=14, init='uniform')(net)
+        net = layers.Activation('tanh')(net)
+        net = layers.Dropout(0.5)(net)
+
+        # we can think of this chunk as the hidden layer with a regularizers
+        net = layers.Dense(64, input_dim=14, init='uniform')(net)
+        net = layers.Dense(64, input_dim=14, init='uniform',
+                                kernel_regularizer=regularizers.l2(0.01),
+                                activity_regularizer=regularizers.l1(0.01))(net)
+        net = layers.normalization.BatchNormalization()(net)
+        net = layers.Activation('tanh')(net)
+        net = layers.Dropout(0.5)(net)
+
+        # we can think of this chunk as the output layer
+        net = layers.Dense(64, input_dim=14, init='uniform')(net)
+        net = layers.normalization.BatchNormalization()(net)
+        net = layers.Activation('softmax')(net)
 
         # Add final output layer with sigmoid activation
         raw_actions = layers.Dense(units=self.action_size, activation='sigmoid',
@@ -139,25 +136,25 @@ class Critic:
         # Add more layers to the combined network if needed
 
         # we can think of this chunk as the input layer
-        # net = layers.Dense(64, input_dim=14, init='uniform')(net)
-        # net = layers.normalization.BatchNormalization()(net)
-        # net = layers.Dense(64, input_dim=14, init='uniform')(net)
-        # net = layers.Activation('tanh')(net)
-        # net = layers.Dropout(0.5)(net)
+        net = layers.Dense(64, input_dim=14, init='uniform')(net)
+        net = layers.normalization.BatchNormalization()(net)
+        net = layers.Dense(64, input_dim=14, init='uniform')(net)
+        net = layers.Activation('tanh')(net)
+        net = layers.Dropout(0.5)(net)
 
         # we can think of this chunk as the hidden layer with a regularizers
-        # net = critic.add(Dense(64, init='uniform')(net))
-        # net = critic.add(Dense(64, input_dim=64,
-        #         kernel_regularizer=regularizers.l2(0.01),
-        #         activity_regularizer=regularizers.l1(0.01))(net))
-        # net = critic.add(BatchNormalization()(net))
-        # net = critic.add(Activation('tanh')(net))
-        # net = critic.add(Dropout(0.5)(net))
+        net = layers.Dense(64, input_dim=14, init='uniform')(net)
+        net = layers.Dense(64, input_dim=14, init='uniform',
+                                kernel_regularizer=regularizers.l2(0.01),
+                                activity_regularizer=regularizers.l1(0.01))(net)
+        net = layers.normalization.BatchNormalization()(net)
+        net = layers.Activation('tanh')(net)
+        net = layers.Dropout(0.5)(net)
 
-        # # we can think of this chunk as the output layer
-        # net = critic.add(Dense(2, init='uniform')(net))
-        # net = critic.add(BatchNormalization()(net))
-        # net = critic.add(Activation('softmax')(net))
+        # we can think of this chunk as the output layer
+        net = layers.Dense(64, input_dim=14, init='uniform')(net)
+        net = layers.normalization.BatchNormalization()(net)
+        net = layers.Activation('softmax')(net)
 
         # Add final output layer to prduce action values (Q values)
         Q_values = layers.Dense(units=1, name='q_values')(net)
