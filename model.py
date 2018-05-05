@@ -11,7 +11,7 @@ import numpy as np
 class Actor:
     """Actor (Policy) Model."""
 
-    def __init__(self, state_size, action_size, action_low, action_high, action_range):
+    def __init__(self, state_size, action_size, action_low, action_high):
         """Initialize parameters and build model.
 
         Params
@@ -20,7 +20,6 @@ class Actor:
             action_size (int): Dimension of each action
             action_low (array): Min value of each action dimension
             action_high (array): Max value of each action dimension
-            action_range (array): Range value of each action dimension
         """
         self.state_size = state_size
         self.action_size = action_size
@@ -28,47 +27,29 @@ class Actor:
         self.action_high = action_high
         self.action_range = self.action_high - self.action_low
 
-        self.w = np.random.normal(
-            size=(self.state_size, self.action_size),  # weights for simple linear policy: state_space x action_space
-            scale=(self.action_range / (2 * self.state_size))) # start producing actions in a decent range
 
-        # Initialize any other variables here
+        # Initialize variables here
 
+        self.dropout_rate = 0.2
         self.build_model()
+        
 
     def build_model(self):
         """Build an actor (policy) network that maps states -> actions."""
         # Define input layer (states)
         states = layers.Input(shape=(self.state_size,), name='states')
 
-
         # Add hidden layers
-        net = layers.Dense(units=32, activation='relu')(states)
-        net = layers.Dense(units=64, activation='relu')(net)
-        net = layers.Dense(units=32, activation='relu')(net)
-
         # Try different layer sizes, activations, add batch normalization, regularizers, etc.
 
-        # we can think of this chunk as the input layer
-        net = layers.Dense(64, input_dim=14, init='uniform')(net)
+        net = layers.Dense(units=32, activation='relu')(states)
         net = layers.normalization.BatchNormalization()(net)
-        net = layers.Dense(64, input_dim=14, init='uniform')(net)
-        net = layers.Activation('tanh')(net)
-        net = layers.Dropout(0.5)(net)
+        net = layers.Dense(units=32, activation='relu')(net)
+        net = layers.normalization.BatchNormalization()(net)
+        net = layers.Dense(units=32, activation='relu')(net)
+        net = layers.Dropout(self.dropout_rate)(net)
+        net = layers.Dense(units=1, activation='linear')(net)
 
-        # we can think of this chunk as the hidden layer with a regularizers
-        net = layers.Dense(64, input_dim=14, init='uniform')(net)
-        net = layers.Dense(64, input_dim=14, init='uniform',
-                                kernel_regularizer=regularizers.l2(0.01),
-                                activity_regularizer=regularizers.l1(0.01))(net)
-        net = layers.normalization.BatchNormalization()(net)
-        net = layers.Activation('tanh')(net)
-        net = layers.Dropout(0.5)(net)
-
-        # we can think of this chunk as the output layer
-        net = layers.Dense(64, input_dim=14, init='uniform')(net)
-        net = layers.normalization.BatchNormalization()(net)
-        net = layers.Activation('softmax')(net)
 
         # Add final output layer with sigmoid activation
         raw_actions = layers.Dense(units=self.action_size, activation='sigmoid',
@@ -110,8 +91,9 @@ class Critic:
         self.action_size = action_size
 
         # Initialize any other variables here
-
+        self.dropout_rate = 0.2
         self.build_model()
+
 
     def build_model(self):
         """Build a critic (value) network that maps (state, action) pairs -> Q-values."""
@@ -119,42 +101,31 @@ class Critic:
         states = layers.Input(shape=(self.state_size,), name='states')
         actions = layers.Input(shape=(self.action_size,), name='actions')
 
-        # Add hidden layer(s) for state pathway
-        net_states = layers.Dense(units=32, activation='relu')(states)
-        net_states = layers.Dense(units=64, activation='relu')(net_states)
+        # # Add hidden layer(s) for state pathway
 
-        # Add hidden layer(s) for action pathway
-        net_actions = layers.Dense(units=32, activation='relu')(actions)
-        net_actions = layers.Dense(units=64, activation='relu')(net_actions)
+        net_states = layers.Dense(units=32, activation='relu')(states)
+        net_states = layers.normalization.BatchNormalization()(net_states)
+        net_states = layers.Dense(units=32, activation='relu')(net_states)
+        net_states = layers.normalization.BatchNormalization()(net_states)
+        net_states = layers.Dense(units=32, activation='relu')(net_states)
+        net_states = layers.Dropout(self.dropout_rate)(net_states)
+        net_states = layers.Dense(units=1, activation='linear')(net_states)
 
         # Try different layer sizes, activations, add batch normalization, regularizers, etc.
+
+        net_actions = layers.Dense(units=32, activation='relu')(actions)
+        net_actions = layers.normalization.BatchNormalization()(net_actions)
+        net_actions = layers.Dense(units=32, activation='relu')(net_actions)
+        net_actions = layers.normalization.BatchNormalization()(net_actions)
+        net_actions = layers.Dense(units=32, activation='relu')(net_actions)
+        net_actions = layers.Dropout(self.dropout_rate)(net_actions)
+        net_actions = layers.Dense(units=1, activation='linear')(net_actions)
 
         # Combine state and action pathways
         net = layers.Add()([net_states, net_actions])
         net = layers.Activation('relu')(net)
 
         # Add more layers to the combined network if needed
-
-        # we can think of this chunk as the input layer
-        net = layers.Dense(64, input_dim=14, init='uniform')(net)
-        net = layers.normalization.BatchNormalization()(net)
-        net = layers.Dense(64, input_dim=14, init='uniform')(net)
-        net = layers.Activation('tanh')(net)
-        net = layers.Dropout(0.5)(net)
-
-        # we can think of this chunk as the hidden layer with a regularizers
-        net = layers.Dense(64, input_dim=14, init='uniform')(net)
-        net = layers.Dense(64, input_dim=14, init='uniform',
-                                kernel_regularizer=regularizers.l2(0.01),
-                                activity_regularizer=regularizers.l1(0.01))(net)
-        net = layers.normalization.BatchNormalization()(net)
-        net = layers.Activation('tanh')(net)
-        net = layers.Dropout(0.5)(net)
-
-        # we can think of this chunk as the output layer
-        net = layers.Dense(64, input_dim=14, init='uniform')(net)
-        net = layers.normalization.BatchNormalization()(net)
-        net = layers.Activation('softmax')(net)
 
         # Add final output layer to prduce action values (Q values)
         Q_values = layers.Dense(units=1, name='q_values')(net)

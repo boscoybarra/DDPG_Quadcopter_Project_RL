@@ -1,5 +1,4 @@
 import numpy as np
-from task import Task
 from replay_buffer import ReplayBuffer
 from model import Actor
 from model import Critic
@@ -14,15 +13,11 @@ class DDPG():
         self.action_size = task.action_size
         self.action_low = task.action_low
         self.action_high = task.action_high
-        self.action_range = self.action_high - self.action_low
 
-        self.w = np.random.normal(
-            size=(self.state_size, self.action_size),  # weights for simple linear policy: state_space x action_space
-            scale=(self.action_range / (2 * self.state_size))) # start producing actions in a decent range
 
         # Actor (Policy) Model
-        self.actor_local = Actor(self.state_size, self.action_size, self.action_low, self.action_high, self.action_range)
-        self.actor_target = Actor(self.state_size, self.action_size, self.action_low, self.action_high, self.action_range)
+        self.actor_local = Actor(self.state_size, self.action_size, self.action_low, self.action_high)
+        self.actor_target = Actor(self.state_size, self.action_size, self.action_low, self.action_high)
 
         # Critic (Value) Model
         self.critic_local = Critic(self.state_size, self.action_size)
@@ -33,9 +28,9 @@ class DDPG():
         self.actor_target.model.set_weights(self.actor_local.model.get_weights())
 
         # Noise process
-        self.exploration_mu = 0.2
-        self.exploration_theta = 0.5
-        self.exploration_sigma = 0.2
+        self.exploration_mu = 0.00001
+        self.exploration_theta = 0.1
+        self.exploration_sigma = 0.3
         self.noise = OUNoise(self.action_size, self.exploration_mu, self.exploration_theta, self.exploration_sigma)
 
         # Replay memory
@@ -44,13 +39,11 @@ class DDPG():
         self.memory = ReplayBuffer(self.buffer_size, self.batch_size)
 
         # Algorithm parameters
-        self.gamma = 0.99  # discount factor
-        self.tau = 0.01  # for soft update of target parameters
+        self.gamma = 0.99  # discount rate factor keep high in order to look for higer future rewards
+        self.tau = 0.001 # for soft update of target parameters
 
         # Score tracker and learning parameters
-        self.best_w = None
         self.best_score = -np.inf
-        self.noise_scale = 0.1
 
     def reset_episode(self):
         self.total_reward = 0.0
@@ -66,6 +59,11 @@ class DDPG():
         self.memory.add(self.last_state, action, reward, next_state, done)
         self.total_reward += reward
         self.count += 1
+        if self.total_reward > self.best_score:
+            self.best_score = self.total_reward
+
+        # Current score
+        self.score = self.total_reward / float(self.count) if self.count else 0.0
 
         # Learn, if enough samples are available in memory
         if len(self.memory) > self.batch_size:
@@ -107,16 +105,6 @@ class DDPG():
         self.soft_update(self.critic_local.model, self.critic_target.model)
         self.soft_update(self.actor_local.model, self.actor_target.model)   
 
-        # Learn by random policy search, using a reward-based score
-        self.score = self.total_reward / float(self.count) if self.count else 0.0
-        if self.score > self.best_score:
-            self.best_score = self.score
-            self.best_w = self.w
-            self.noise_scale = max(0.5 * self.noise_scale, 0.01)
-        else:
-            self.w = self.best_w
-            self.noise_scale = min(2.0 * self.noise_scale, 3.2)
-        self.w = self.w + self.noise_scale * np.random.normal(size=self.w.shape)  # equal noise in all directions
 
     def soft_update(self, local_model, target_model):
         """Soft update model parameters."""
