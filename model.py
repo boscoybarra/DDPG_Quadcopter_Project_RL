@@ -30,7 +30,9 @@ class Actor:
 
         # Initialize variables here
 
-        self.dropout_rate = 0.2
+        self.learning_rate = 0.0001
+        self.regularizer_rate = 0.000005
+        self.dropout_rate = 0.01
         self.build_model()
         
 
@@ -42,18 +44,15 @@ class Actor:
         # Add hidden layers
         # Try different layer sizes, activations, add batch normalization, regularizers, etc.
 
-        net = layers.Dense(units=32, activation='relu')(states)
+        net = layers.Dense(units=400, activation='relu', kernel_regularizer=layers.regularizers.l2(self.regularizer_rate))(states)
         net = layers.normalization.BatchNormalization()(net)
-        net = layers.Dense(units=32, activation='relu')(net)
-        net = layers.normalization.BatchNormalization()(net)
-        net = layers.Dense(units=32, activation='relu')(net)
         net = layers.Dropout(self.dropout_rate)(net)
-        net = layers.Dense(units=1, activation='linear')(net)
-
+        net = layers.Dense(units=200, activation='relu', kernel_regularizer=layers.regularizers.l2(self.regularizer_rate))(net)
+        net = layers.normalization.BatchNormalization()(net)
 
         # Add final output layer with sigmoid activation
         raw_actions = layers.Dense(units=self.action_size, activation='sigmoid',
-            name='raw_actions')(net)
+            name='raw_actions',kernel_initializer=layers.initializers.RandomUniform(minval=-0.001, maxval=0.001))(net)
 
         # Scale [0, 1] output for each action dimension to proper range
         actions = layers.Lambda(lambda x: (x * self.action_range) + self.action_low,
@@ -69,7 +68,7 @@ class Actor:
         # Incorporate any additional losses here (e.g. from regularizers)
 
         # Define optimizer and training function
-        optimizer = optimizers.Adam()
+        optimizer = optimizers.Adam(self.learning_rate)
         updates_op = optimizer.get_updates(params=self.model.trainable_weights, loss=loss)
         self.train_fn = K.function(
             inputs=[self.model.input, action_gradients, K.learning_phase()],
@@ -91,7 +90,8 @@ class Critic:
         self.action_size = action_size
 
         # Initialize any other variables here
-        self.dropout_rate = 0.2
+        self.learning_rate = 0.001
+        self.regularizer_rate = 0.000004
         self.build_model()
 
 
@@ -103,23 +103,15 @@ class Critic:
 
         # # Add hidden layer(s) for state pathway
 
-        net_states = layers.Dense(units=32, activation='relu')(states)
+        net_states = layers.Dense(units=400, activation='relu', kernel_regularizer=layers.regularizers.l2(self.regularizer_rate))(states)
         net_states = layers.normalization.BatchNormalization()(net_states)
-        net_states = layers.Dense(units=32, activation='relu')(net_states)
+        net_states = layers.Dense(units=200, activation='relu', kernel_regularizer=layers.regularizers.l2(self.regularizer_rate))(net_states)
         net_states = layers.normalization.BatchNormalization()(net_states)
-        net_states = layers.Dense(units=32, activation='relu')(net_states)
-        net_states = layers.Dropout(self.dropout_rate)(net_states)
-        net_states = layers.Dense(units=1, activation='linear')(net_states)
 
         # Try different layer sizes, activations, add batch normalization, regularizers, etc.
 
-        net_actions = layers.Dense(units=32, activation='relu')(actions)
+        net_actions = layers.Dense(units=200, activation='relu', kernel_regularizer=layers.regularizers.l2(self.regularizer_rate))(actions)
         net_actions = layers.normalization.BatchNormalization()(net_actions)
-        net_actions = layers.Dense(units=32, activation='relu')(net_actions)
-        net_actions = layers.normalization.BatchNormalization()(net_actions)
-        net_actions = layers.Dense(units=32, activation='relu')(net_actions)
-        net_actions = layers.Dropout(self.dropout_rate)(net_actions)
-        net_actions = layers.Dense(units=1, activation='linear')(net_actions)
 
         # Combine state and action pathways
         net = layers.Add()([net_states, net_actions])
@@ -127,14 +119,14 @@ class Critic:
 
         # Add more layers to the combined network if needed
 
-        # Add final output layer to prduce action values (Q values)
-        Q_values = layers.Dense(units=1, name='q_values')(net)
+        # Add final output layer to produce action values (Q values)
+        Q_values = layers.Dense(units=1, name='q_values', kernel_initializer=layers.initializers.RandomUniform(minval=-0.001, maxval=0.001))(net)
 
         # Create Keras model
         self.model = models.Model(inputs=[states, actions], outputs=Q_values)
 
         # Define optimizer and compile model for training with built-in loss function
-        optimizer = optimizers.Adam()
+        optimizer = optimizers.Adam(self.learning_rate)
         self.model.compile(optimizer=optimizer, loss='mse')
 
         # Compute action gradients (derivative of Q values w.r.t. to actions)
